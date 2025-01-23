@@ -1,0 +1,16 @@
+Library
+  structure SeqBasis
+  structure ReadFile
+  structure Source
+  structure WithSource
+  structure Error
+  structure AstAllows
+is
+  $/basis.cm
+  $/smlnj-lib.cm 
+  SeqBasis.sml 
+  ReadFile.sml 
+  Source.sml 
+  WithSource.sml 
+  Error.sml
+  AstAllows.sml

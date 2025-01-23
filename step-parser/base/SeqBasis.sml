@@ -1,0 +1,38 @@
+structure SeqBasis:
+sig
+  val foldl: ('b * 'a -> 'b) -> 'b -> (int * int) -> (int -> 'a) -> 'b 
+  val foldr: ('b * 'a -> 'b) -> 'b -> (int * int) -> (int -> 'a) -> 'b 
+  val filter: (int * int ) -> (int -> 'a) -> (int -> bool) -> 'a array
+end = 
+struct
+  structure A = Array 
+  structure AS = ArraySlice
+
+  fun foldl g b (lo, hi) f = 
+    if lo >= hi then b 
+    else let val b' = g (b, f lo) in foldl g b' (lo + 1, hi) f end
+
+  fun foldr g b (lo, hi) f = 
+    if lo >= hi then b 
+    else 
+      let
+        val hi' = hi - 1
+        val b' = g (b, f hi')  
+      in foldr g b' (lo, hi') f 
+      end
+
+  fun filter (lo, hi) f pred =
+    if hi - lo <= 0 then Array.fromList []
+    else
+      let
+        val count = foldl op+ 0 (lo, hi) (fn i => if pred i then 1 else 0)
+        val output = Array.array (count, f lo)
+        fun loop (lo, hi) b f = 
+          if lo >= hi then b else loop (lo + 1, hi) (f (b, lo)) f
+      in 
+        loop (lo, hi) 0 (fn (j, i) => if pred i then (Array.update (output, j, f
+        i); (j + 1)) else j);
+        output
+      end
+
+end
