@@ -91,6 +91,8 @@ struct
           | #"}" => success (mkr Token.CloseCurlyBracket (s, s + 1))
           | #"," => success (mkr Token.Comma (s, s + 1))
           | #";" => success (mkr Token.Semicolon (s, s + 1))
+          | #":" => success (mkr Token.Colon (s, s + 1))
+          | #"\\" => success (mkr Token.Backslash (s, s + 1))
           | #"\"" =>
               let val s' = advance_toEndOfString (s + 1) {stringStart = s}
               in success (mk Token.StringConstant (s, s'))
@@ -99,6 +101,8 @@ struct
           | c =>
               if LexUtils.isDecDigit c then
                 loop_decIntegerConstant (s + 1) {constStart = s}
+              else if LexUtils.isSymbolic c then
+                loop_symbolicId (s + 1) {idStart = s, longStart = NONE}
               else if LexUtils.isLetter c then
                 loop_alphanumId (s + 1)
                   {idStart = s, startsPrime = false, longStart = NONE}
@@ -169,17 +173,34 @@ struct
                 , what = "Unexpected keyword."
                 , explain = SOME ""
                 }
+            else if is #"\\" s andalso startsPrime then
+              error
+                { pos = slice (s, s + 1)
+                , what = "Unexpected dot."
+                , explain = SOME ""
+                }
+            else if is #"\\" s then
+              loop_continueLongIdentifier (s + 1)
+                {longStart = if isQualified then longStart else SOME idStart}
             else if is #"." s andalso startsPrime then
+              error
+                { pos = slice (s, s + 1)
+                , what = "Unexpected backslash."
+                , explain = SOME ""
+                }
+            else if is #"." s then
               loop_continueLongIdentifier (s + 1)
                 {longStart = if isQualified then longStart else SOME idStart}
             else if not isQualified then
               success tok
             else
-              NONE
+              success (mk Token.LongIdentifier (Option.valOf longStart, s))
           end 
 
       and loop_continueLongIdentifier s {longStart} =
-        if check LexUtils.isSymbolic s then
+        if check Char.isSpace s then
+          loop_continueLongIdentifier (s + 1) {longStart = longStart}
+        else if check LexUtils.isSymbolic s then
           loop_symbolicId (s + 1) {idStart = s, longStart = longStart}
         else if check LexUtils.isLetter s then
           loop_alphanumId (s + 1)
@@ -295,7 +316,11 @@ struct
           case next allows (Source.drop src offset) of 
             NONE => finish acc
           | SOME tok => 
-              loop (tok :: acc) (tokEndOffset tok)
+              let 
+                val _ = print (Token.toString (Token.fromPre tok))
+              in 
+                loop (tok :: acc) (tokEndOffset tok)
+              end
     in 
       loop [] startOffset
     end 

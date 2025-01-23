@@ -135,6 +135,8 @@ sig
   | Equal 
   | Comma
   | Semicolon 
+  | Colon
+  | Backslash
   
   datatype class =
     Comment
@@ -144,6 +146,7 @@ sig
   | CharConstant
   | StringConstant
   | Identifier
+  | LongIdentifier
   | Whitespace
 
   type token 
@@ -319,6 +322,8 @@ struct
   | Equal 
   | Comma
   | Semicolon 
+  | Colon
+  | Backslash
   
   datatype class =
     Comment
@@ -328,6 +333,7 @@ struct
   | CharConstant
   | StringConstant
   | Identifier
+  | LongIdentifier
   | Whitespace
 
   type pretoken = class WithSource.t 
@@ -483,6 +489,7 @@ struct
       | "WITH" => k With
       | "XOR" => k Xor
       | "=" => k Equal
+      | ":" => k Colon
       | _ => NONE
     end
       
