@@ -11,7 +11,7 @@ struct
 
   fun error {pos, what, explain} =
     raise Error.Error 
-      (Error.lineError 
+      (Error.lineError  
         {header = "SYNTAX ERROR", pos = pos, what = what, explain = explain})
 
   fun next allows src: Token.Pretoken.t option = 
@@ -29,15 +29,15 @@ struct
       
       datatype newcursor = EndOfChar of int | EndOfFormatEscape of int
 
-
       fun advance_oneCharOrEscapeSequenceInString s (args as {stringStart}) =
-        (* meet escape sequence *)
-        if is backslash s then
+        (* meet backslash *)
+        if is backslash s andalso is #"'" (s + 1) then 
+          SOME (EndOfChar (s + 1))
+        (* meet escape sequence  *)
+        else if is backslash s then
           advance_inStringEscapeSequence (s + 1) args
-         
         (* end of the string *)
-        else if is #"\"" s then NONE
-             
+        else if is #"'" s then NONE
         (* meet undesired end *)
         else if is #"\n" s orelse isEndOfFileAt s then
           error 
@@ -52,6 +52,8 @@ struct
       and advance_inStringEscapeSequence s (args as {stringStart}) =
         if check LexUtils.isValidSingleEscapeChar s then 
           SOME (EndOfChar (s + 1))
+        else if is #"x" s then 
+          advance_inStringOneDigitEscapeSequence (s + 1) args
         else 
           error
             { pos = slice (s - 2, s - 1)
@@ -59,24 +61,27 @@ struct
             , explain = SOME ""
             }
           
+      and advance_inStringOneDigitEscapeSequence s _ =
+        if check LexUtils.isHexDigit s then 
+          SOME (EndOfChar (s + 1))
+        else
+          error
+            { pos = slice (s - 2, s - 1)
+            , what = "Invalid escape sequence."
+            ,explain = SOME ""
+            }
         
       and advance_toEndOfString s (args as {stringStart}) =
         case advance_oneCharOrEscapeSequenceInString s args of 
              SOME (EndOfChar s') => advance_toEndOfString s' args
            | SOME (EndOfFormatEscape s') => advance_toEndOfString s' args
            | NONE => 
-               if is #"\"" s then s + 1
+               if is #"'" s then s + 1
                else
                  raise Error.Error 
                    { header = "BUG!"
                    , content = []
                    }
-
-      and advance_oneCharInString s args =
-        case advance_oneCharOrEscapeSequenceInString s args of 
-          SOME (EndOfChar s') => SOME s'
-        | SOME (EndOfFormatEscape s') => advance_oneCharInString s' args 
-        | NONE => NONE
 
       fun loop_topLevel s = 
         if isEndOfFileAt s then
@@ -89,11 +94,13 @@ struct
           | #"]" => success (mkr Token.CloseSquareBracket (s, s + 1))
           | #"{" => success (mkr Token.OpenCurlyBracket (s, s + 1))
           | #"}" => success (mkr Token.CloseCurlyBracket (s, s + 1))
+          | #"." => success (mkr Token.Dot (s, s + 1))
           | #"," => success (mkr Token.Comma (s, s + 1))
           | #";" => success (mkr Token.Semicolon (s, s + 1))
-          | #":" => success (mkr Token.Colon (s, s + 1))
+          | #":" => loop_afterColon (s + 1)
           | #"\\" => success (mkr Token.Backslash (s, s + 1))
-          | #"\"" =>
+          | #"-" => loop_afterDash (s + 1) {constStart = s}
+          | #"'" =>
               let val s' = advance_toEndOfString (s + 1) {stringStart = s}
               in success (mk Token.StringConstant (s, s'))
               end 
@@ -118,26 +125,8 @@ struct
         if check Char.isSpace i then loop_whitespace {start = start} (i + 1)
         else success (mk Token.Whitespace (start, i))
 
-      and loop_charConstant s =
-        case advance_oneCharInString s {stringStart = s - 1} of 
-          SOME s' => 
-            if is #"\"" s' then
-              success (mk Token.CharConstant (s - 2, s' + 1))
-            else
-              error {
-                pos = slice (s', s' + 1)
-                , what = "Character constant contains more than one character."
-                , explain = NONE 
-                }
-        | NONE => 
-            error {
-              pos = slice (s - 2, s + 1)
-              , what = "Character constant is empty."
-              , explain = NONE
-              }
-
       and loop_symbolicId s (args as {idStart, longStart}) =
-        if check LexUtils.isSymbolic s then
+        if check LexUtils.isSymbolic s then 
           loop_symbolicId (s + 1) args
         else
           let 
@@ -166,28 +155,9 @@ struct
             val tok = Token.Pretoken.keywordOrIdentifier srcHere
             val isQualified = Option.isSome longStart
           in 
-            if Token.isKeyword (Token.fromPre tok)
-            andalso (isQualified orelse is #"." s) then
-              error {
-                pos = srcHere
-                , what = "Unexpected keyword."
-                , explain = SOME ""
-                }
-            else if is #"\\" s andalso startsPrime then
-              error
-                { pos = slice (s, s + 1)
-                , what = "Unexpected dot."
-                , explain = SOME ""
-                }
-            else if is #"\\" s then
+            if is #"\\" s then
               loop_continueLongIdentifier (s + 1)
                 {longStart = if isQualified then longStart else SOME idStart}
-            else if is #"." s andalso startsPrime then
-              error
-                { pos = slice (s, s + 1)
-                , what = "Unexpected backslash."
-                , explain = SOME ""
-                }
             else if is #"." s then
               loop_continueLongIdentifier (s + 1)
                 {longStart = if isQualified then longStart else SOME idStart}
@@ -224,7 +194,6 @@ struct
         else
           success (mk Token.IntegerConstant (s - 1, s))
 
-
       and loop_decIntegerConstant s (args as {constStart}) =
         if check LexUtils.isDecDigit s then
           loop_decIntegerConstant (s + 1) args
@@ -238,6 +207,8 @@ struct
       and loop_realConstantAfterDot s (args as {constStart}) = 
         if check LexUtils.isDecDigit s then
           loop_realConstant (s + 1) args
+        else if is #"e" s orelse is #"E" s then 
+          loop_realConstantAfterExponent (s + 1) args
         else
           error 
             { pos = slice (constStart, s)
@@ -274,6 +245,38 @@ struct
           loop_inComment (s + 1) {commentStart = s - 1, nesting = 1}
         else
           success (mkr Token.OpenParen (s - 1, s))
+          
+      and loop_afterColon s =
+        if is #"=" s then
+          success (mkr Token.ColonEqual (s - 1, s + 1))
+        else
+          success (mkr Token.Colon (s - 1, s))
+
+      and loop_afterDash s {constStart} =
+        if is #"0" s then
+          loop_afterDashThenZero (s + 1) {constStart = constStart}
+        else if check LexUtils.isDecDigit s then 
+          loop_decIntegerConstant (s + 1) {constStart = constStart}
+        else if is #"-" s then
+          loop_inTailComment (s + 1) {commentStart = constStart}
+        else
+          success (mk Token.Identifier (s - 1, s))
+
+      and loop_afterDashThenZero s {constStart} =
+        if is #"." s then 
+          loop_realConstantAfterDot (s + 1) {constStart = constStart}
+        else if (is #"e" s) orelse (is #"E" s) then 
+          loop_realConstantAfterExponent (s + 1) {constStart = constStart}
+        else if check LexUtils.isDecDigit s then 
+          loop_decIntegerConstant (s + 1) {constStart = constStart}
+        else
+          success (mk Token.IntegerConstant (constStart, s))
+
+      and loop_inTailComment s {commentStart} =
+        if is #"\n" s then
+          success (mk Token.Comment (commentStart, s))
+        else
+          loop_inTailComment (s + 1) {commentStart = commentStart}
 
       and loop_inComment s {commentStart, nesting} =
         if nesting = 0 then

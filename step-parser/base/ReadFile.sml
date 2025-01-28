@@ -21,7 +21,7 @@ struct
         
       open Posix.IO 
 
-      val bufferSize = 10000
+      val bufferSize =  10000000
       val buffer = Word8Array.array (bufferSize, 0w0)
       val result = Array.array (length, default)
 

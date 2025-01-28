@@ -133,17 +133,19 @@ sig
   | OpenCurlyBracket 
   | CloseCurlyBracket
   | Equal 
+  | Dot
   | Comma
   | Semicolon 
   | Colon
   | Backslash
+  | ColonEqual
   
   datatype class =
     Comment
   | Keyword of keyword
   | IntegerConstant
   | RealConstant
-  | CharConstant
+  | CharConstant 
   | StringConstant
   | Identifier
   | LongIdentifier
@@ -320,10 +322,12 @@ struct
   | OpenCurlyBracket 
   | CloseCurlyBracket
   | Equal 
+  | Dot
   | Comma
   | Semicolon 
   | Colon
   | Backslash
+  | ColonEqual
   
   datatype class =
     Comment
