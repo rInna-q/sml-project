@@ -158,6 +158,19 @@ sig
   val getSource: token -> Source.t 
 
   val toString: token -> string 
+  val keywordToString: keyword -> string
+  val classToString: class -> string
+
+  val nextToken: token -> token option 
+  val prevToken: token -> token option
+  val nextTokenNotCommentOrWhitespace: token -> token option
+  val prevTokenNotCommentOrWhitespace: token -> token option
+  val hasCommentsAfter: token -> bool
+  val hasCommentsBefore: token -> bool
+  val commentsBefore: token -> token list
+  val commentsAfter: token -> token list
+  val commentsOrWhitespaceBefore: token -> token list
+  val commentsOrWhitespaceAfter: token -> token list
 
   val isKeyword: token -> bool 
   val isStringConstant: token -> bool
@@ -549,6 +562,87 @@ struct
 
   fun fromPre (t: pretoken) = 
     List.nth ((makeGroup [t]), 0)
+
+  fun nextToken ({idx = i, context}: token) = 
+    if i + 1 < List.length context then SOME {idx = i + 1, context = context}
+    else NONE
+
+  fun prevToken ({idx = i, context}: token) = 
+    if i > 0 then SOME {idx = i - 1, context = context} else NONE
+
+  fun prevTokenNotCommentOrWhitespace tok = 
+    case prevToken tok of 
+      NONE => NONE
+    | SOME t' => 
+        if isCommentOrWhitespace t' then prevTokenNotCommentOrWhitespace t'
+        else SOME t'
+
+  fun nextTokenNotCommentOrWhitespace tok = 
+    case nextToken tok of 
+      NONE => NONE
+    | SOME t' =>
+        if isCommentOrWhitespace t' then nextTokenNotCommentOrWhitespace t'
+        else SOME t'
+
+  fun commentsOrWhitespaceBefore tok = 
+    let 
+      fun loop acc t =
+        case prevToken t of 
+          SOME t' => 
+            if isCommentOrWhitespace t' then loop (t' :: acc) t' else acc 
+        | NONE => acc
+    in 
+      loop [] tok
+    end 
+
+  fun commentsOrWhitespaceAfter tok =
+    let 
+      fun loop acc t =
+        case nextToken t of 
+          SOME t' =>
+            if isCommentOrWhitespace t' then loop (t' :: acc) t' else acc
+        | NONE => acc 
+    in 
+      List.rev (loop [] tok)
+    end 
+    
+  fun hasCommentsBefore t =
+    case prevToken t of 
+      SOME t' =>
+        isComment t' orelse (isWhitespace t' andalso hasCommentsBefore t')
+    | NONE => false
+
+  fun hasCommentsAfter t =
+    case nextToken t of 
+      SOME t' =>
+        isComment t' orelse (isWhitespace t' andalso hasCommentsAfter t')
+    | NONE => false
+
+  fun commentsBefore tok = 
+    let 
+      fun loop acc t =
+        case prevToken t of 
+          SOME t' =>
+            if isWhitespace t' then loop acc t'
+            else if isComment t' then loop (t' :: acc) t'
+            else acc
+        | NONE => acc
+    in 
+      loop [] tok
+    end 
+
+  fun commentsAfter tok =
+    let 
+      fun loop acc t =
+        case nextToken t of 
+          SOME t' =>
+            if isWhitespace t' then loop acc t'
+            else if isComment t' then loop (t' :: acc) t'
+            else acc
+        | NONE => acc
+    in 
+      List.rev (loop [] tok)
+    end 
     
   structure Pretoken =
   struct
