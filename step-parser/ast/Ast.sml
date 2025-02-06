@@ -67,8 +67,23 @@ struct
       (case pat ok 
          Con _ => true
        | _ => false)
-
   end
 
+  structure Exp = 
+  struct
+    open AstType.Exp
+
+    fun isAtExt exp =
+      case exp of 
+        Const _ => true
+      | Parens _ => true
+      | _ => false
+
+    fun isInfExp exp =
+      case exp of 
+        Infix _ = true
+      | _ => false
+  end
+  
 end
 

@@ -51,13 +51,60 @@ struct
   fun maybeKeyword toks rc i =
     if isKeyword toks rc i then (i + 1, SOME (List.nth (toks, i))) else (i, NONE)
 
-  fun genericLabel toks i
-    if check tokes Token.isGenericLabel i then
+  fun genericLabel toks i =
+    if check toks Token.isGenericLabel i then
       (i + 1, List.nth (toks, i))
     else
       ParseUtils.tokError toks
         {pos = i, what = "", explain = NONE}
 
-  fun
+  fun bagLabel toks i =
+    if check toks Token.isBagLabel i then 
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks
+        {pos = i, what = "", explain = NONE}
+
+  fun setLabel toks i =
+    if check toks Token.isSetLabel i then 
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks
+        {pos = i, what = "", explain = NONE}
+
+  fun listLabel toks i =
+    if check toks Token.isListLabel i then 
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks
+        {pos = i, what = "", explain = NONE}
+
+  fun arrayLabel toks i =
+    if check toks Token.isArrayLabel i then 
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks 
+        {pos = i, what = "", explain = NONE}
+
+  fun aggregateLabel toks i =
+    if check toks Token.isAggregateLabel i then
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks
+        {pos = i, what = "", explain = NONE}
+
+  fun enumerationLabel toks i =
+    if check toks Token.isEnumerationLabel i then
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks
+        {pos = i, what = "", explain = NONE}
+
+  fun selectLabel toks i =
+    if check toks Token.isSelectLabel i then
+      (i + 1, List.nth (toks, i))
+    else
+      ParseUtils.tokError toks 
+        {pos = i, what = "", explain = NONE}
 
 end

@@ -181,6 +181,21 @@ sig
   val isOpenParen: token -> bool
   val isSemicolon: token -> bool
   val isIdentifier: token -> bool
+  val isSized: token -> bool
+  val isContainer: token -> bool
+  val isAggregate: token -> bool
+  val isOf: token -> bool 
+  val isUnique: token -> bool
+  val isOptional: token -> bool
+  val isGenericLabel: token -> bool
+  val isBagLabel: token -> bool
+  val isSetLabel: token -> bool
+  val isListLabel: token -> bool
+  val isArrayLabel: token -> bool
+  val isAggregateLabel: token -> bool
+  val isEnumerationLabel: token -> bool
+  val isSelectLabel: token -> bool
+  val endsCurrentExp: token -> bool
 
   structure Pretoken:
   sig
@@ -557,6 +572,46 @@ struct
       Identifier => true
     | _ => false
 
+  fun isGenericLabel tok = 
+    case getClass tok of 
+      Keyword Generic => true
+    | _ => false
+
+  fun isBagLabel tok =
+    case getClass tok of 
+      Keyword Bag => true
+    | _ => false
+
+  fun isSetLabel tok =
+    case getClass tok of 
+      Keyword Set => true
+    | _ => false
+
+  fun isListLabel tok =
+    case getClass tok of 
+      Keyword List => true
+    | _ => false
+
+  fun isArrayLabel tok =
+    case getClass tok of 
+      Keyword Array => true
+    | _ => false
+
+  fun isAggregateLabel tok =
+    case getClass tok of 
+      Keyword Aggregate => true
+    | _ => false
+
+  fun isEnumerationLabel tok =
+    case getClass tok of 
+      Keyword Enumeration => true
+    | _ => false
+
+  fun isSelectLabel tok =
+    case getClass tok of 
+      Keyword Select => true
+    | _ => false
+
   fun makeGroup (s: pretoken list): token list =
     List.tabulate (List.length s, fn i => {idx = i, context = s})
 
@@ -643,6 +698,19 @@ struct
     in 
       List.rev (loop [] tok)
     end 
+
+  fun endsCurrentExp tok = 
+    case getClass tok of 
+      Keyword rc => 
+        List.exists (fn rc' => rc = rc')
+          [ Semicolon
+          , Comma
+          , Colon
+          , Of
+          , While
+          , Until
+          ]
+    | _ => false
     
   structure Pretoken =
   struct
@@ -658,5 +726,4 @@ struct
     val keywordOrIdentifier = keywordOrIdentifier
 
   end 
-
 end 
