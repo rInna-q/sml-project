@@ -181,6 +181,12 @@ sig
   val isOpenParen: token -> bool
   val isSemicolon: token -> bool
   val isIdentifier: token -> bool
+  val isValueIdentifier: token -> bool
+  val isValueIdentifierNoEqual: token -> bool
+  val isSymbolicIdentifier: token -> bool
+  val isMaybeLongIdentifier: token -> bool
+  val isTyVar: token -> bool
+  val isTyCon: token -> bool
   val isSized: token -> bool
   val isContainer: token -> bool
   val isAggregate: token -> bool
@@ -570,6 +576,45 @@ struct
   fun isIdentifier tok =
     case getClass tok of 
       Identifier => true
+    | _ => false
+
+  fun isValueIdentifier tok =
+    case getClass tok of 
+      Identifier => true
+    | _ => false
+
+  fun isLongIdentifier tok =
+    case getClass tok of 
+      LongIdentifier => true
+    | _ => false
+
+  fun isMaybeLongIdentifier tok =
+    case getClass tok of 
+      Identifier => true
+    | LongIdentifier => true
+    | _ => false
+
+  fun isSymbolicIdentifier tok =
+    let 
+      val src = getSource tok 
+      val isSymb = LexUtils.isSymbolic (Source.nth src (Source.length src - 1))
+    in 
+      case getClass tok of 
+        Identifier => isSymb
+      | LongIdentifier => isSymb
+      | _ => false
+    end 
+
+  fun isTyVar tok =
+    case getClass tok of 
+      Identifier => true
+    | _ => false
+
+  fun isTyCon tok =
+    case getClass tok of 
+      Keyword v =>
+        List.exists (fn v' => v' = v)
+          [Bag, Set, List, Array]
     | _ => false
 
   fun isGenericLabel tok = 

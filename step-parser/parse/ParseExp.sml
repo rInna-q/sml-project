@@ -74,6 +74,17 @@ struct
       fun isKeyword rc =
         check (fn t => Token.Keyword rc = Token.getClass t)
 
+      fun parse_keyword rc i =
+        PS.Keyword toks rc i 
+      fun parse_maybeKeyword rc i =
+        PS.maybeKeyword toks rc i 
+      fun parse_vid i = PS.vid toks i 
+      fun parse_longvid i = PS.longvid toks i 
+      fun parse_pat infdict restriction i =
+        PP.pat allows toks infdict restriction i 
+
+
+
       fun consume_exp infdict restriction i = 
         let 
           val (i, exp) =
