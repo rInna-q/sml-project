@@ -14,7 +14,7 @@ sig
   val oneOrMoreDelimitedByKeyword:
     Token.t list
     -> {parseElem: (int, 'a) parser, delim: Token.keyword}
-    -> {int, {elems: 'a list, delims: Token.t list}} parser
+    -> (int, {elems: 'a list, delims: Token.t list}) parser
 
   val two: ('s, 'a) parser * ('s, 'b) parser -> ('s, ('a * 'b)) parser
 
@@ -31,7 +31,7 @@ struct
   fun zeroOrMoreDelimitedByKeyword toks {parseElem, delim, shouldStop} i =
     let
       val numToks = List.length toks
-      fun tok i = List.nth toks i 
+      fun tok i = List.nth (toks, i) 
       fun check f i =
         i < numToks andalso f (tok i)
       fun isKeyword rc =
@@ -54,10 +54,10 @@ struct
       (i, {elems = List.rev elems, delims = List.rev delims})
     end
 
-  fun oneOrMoreDelimitedByKeyword toks {parseElem, delims} i =
+  fun oneOrMoreDelimitedByKeyword toks {parseElem, delim} i =
     let 
       val numToks = List.length toks
-      fun tok i = List.nth toks i 
+      fun tok i = List.nth (toks, i) 
       fun check f i =
         i < numToks andalso f (tok i)
       fun isKeyword rc =
@@ -65,7 +65,7 @@ struct
 
       fun loop elems delims i =
         let 
-          val (i, elems) = parseElem i 
+          val (i, elem) = parseElem i 
           val elems = elem :: elems
         in 
           if isKeyword delim i then loop elems (tok i :: delims) (i + 1)

@@ -17,17 +17,20 @@ struct
   structure Pat =
   struct
     datatype typelist =
-      List of 
-        { varr: Token.t option
-        , elems: Token.t list
+      ActualList of 
+        { elems: Token.t list
+        , delims: Token.t list
+        }
+    | FormalList of 
+        { elems: {varr: Token.t option, id: Token.t} list
         , delims: Token list
-        , colon: Token .t 
+        , colon: Token.t 
         , ty: Ty.t 
         }
 
     and pat = 
       Unit of {left: Token.t, right: Token.t}
-    | Tuple of 
+    | Parens of 
         { left: Token.t
         , elems: typelist list
         , delims: Token list 
@@ -42,9 +45,29 @@ struct
   struct
     datatype exp =
       Const of Token.t 
+    | Ident of {opp: Token.t option, id: MaybeLongToken.t}
     | Parens of 
          { left: Token.t 
          , exp: exp
+         , right: Token.t 
+         }
+    | List of 
+         { left: Token.t 
+         , elems:
+         , delims: Token.t list
+         , right: Token.t 
+         }
+    | Call of 
+         { id: Token.t 
+         , pat: Pat.t 
+         }
+    | Interval of 
+         { left: Token.t 
+         , low: Expxp.t 
+         , op1: Token.t 
+         , item: Exp.t  
+         , op2: Token.t 
+         , high: Exp.t 
          , right: Token.t 
          }
     | Infix of 
@@ -52,6 +75,17 @@ struct
          , id: Token.t 
          , right: exp
          }
+    | Query of 
+         { queryy: Token.t 
+         , left: Token.t 
+         , id: Token.t 
+         , colonequal: Token.t 
+         , exp1: exp
+         , bar: Token.t
+         , exp2: exp 
+         , right: Token.t 
+         }
+          
     type t = exp
   end
 
@@ -68,15 +102,6 @@ struct
     , width: Exp.t 
     , right: Token.t 
     , fixed: Token.t 
-    }
-
-  type interval = 
-    { left: Token.t 
-    , low: Expxp.t 
-    , op1: Token.t 
-    , item: Exp.t  
-    , op2: Token.t 
-    , high: Exp.t 
     }
 
   structure Ty = 

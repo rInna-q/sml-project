@@ -64,7 +64,7 @@ struct
     fun isAppPat pat =
       isAppPat pat
       orelse
-      (case pat ok 
+      (case pat of 
          Con _ => true
        | _ => false)
   end
@@ -81,7 +81,7 @@ struct
 
     fun isInfExp exp =
       case exp of 
-        Infix _ = true
+        Infix _ => true
       | _ => false
   end
   

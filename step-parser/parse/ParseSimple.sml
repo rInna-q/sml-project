@@ -6,19 +6,13 @@ sig
   type tokens = Token.t list
 
   val keyword: tokens -> Token.keyword -> (int, Token.t) parser
-  val maybeKeyword: tokens -> Token.keyword -> (int, Token.t option) parser
+  val maybeKeyword: tokens 
+                    -> Token.keyword 
+                    -> (int, Token.t option) parser
+   
   val tyvar: tokens -> (int, Token.t) parser
   val tyvars: tokens -> (int, Token.t Ast.SyntaxSeq.t) parser
- 
-  val genericLabel: tokens -> (int, Token.t) parser
-  val bagLabel: tokens -> (int, Token.t) parser
-  val setLabel: tokens -> (int, Token.t) parser
-  val listLabel: tokens -> (int, Token.t) parser 
-  val arrayLabel: tokens -> (int, Token.t) parser
-  val aggregateLabel: tokens -> (int, Token.t) parser
-  val enumerationLabel: tokens -> (int, Token.t) parser
-  val selectLabel: tokens -> (int, Token.t) parser
-
+  val identifier: tokens -> (int, Token.t) parser
 
 end = 
 struct 
@@ -49,59 +43,55 @@ struct
         }
 
   fun maybeKeyword toks rc i =
-    if isKeyword toks rc i then (i + 1, SOME (List.nth (toks, i))) else (i, NONE)
+    if isKeyword toks rc i then
+      let 
+        val tok = List.nth (toks, i)
+      in 
+        (i + 1, SOME tok) 
+      end
+    else 
+      (i, NONE)
 
-  fun genericLabel toks i =
-    if check toks Token.isGenericLabel i then
-      (i + 1, List.nth (toks, i))
-    else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
-
-  fun bagLabel toks i =
-    if check toks Token.isBagLabel i then 
-      (i + 1, List.nth (toks, i))
-    else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
-
-  fun setLabel toks i =
-    if check toks Token.isSetLabel i then 
-      (i + 1, List.nth (toks, i))
-    else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
-
-  fun listLabel toks i =
-    if check toks Token.isListLabel i then 
-      (i + 1, List.nth (toks, i))
-    else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
-
-  fun arrayLabel toks i =
-    if check toks Token.isArrayLabel i then 
+  fun tyvar toks i = 
+    if check toks Token.isTyVar i then 
       (i + 1, List.nth (toks, i))
     else
       ParseUtils.tokError toks 
-        {pos = i, what = "", explain = NONE}
+        { pos = i 
+        , what = ""
+        , explain = SOME ""
+        }
 
-  fun aggregateLabel toks i =
-    if check toks Token.isAggregateLabel i then
-      (i + 1, List.nth (toks, i))
+  fun tyvars toks i =
+    if 
+      check toks Token.isTyVar i 
+    then
+      (i + 1, Ast.SyntaxSeq.One (List.nth (toks, i)))
+    else if 
+      not (isKeyword toks Token.OpenParen i 
+           andalso check toks Token.isTyVar (i + 1))
+    then
+      (i, Ast.SyntaxSeq.Empty)
     else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
+      let 
+        val (i, openParen) = (i + 1, List.nth (toks, i))
+        val (i, {elems, delims}) =
+          ParserCombinators.oneOrMoreDelimitedByKeyword toks
+            {parseElem = tyvar toks, delim = Token.Comma} i 
+        val (i, closeParen) = keyword toks Token.closeParen i 
+      in 
+        ( i 
+        , Ast.SyntaxSeq.Many
+            { left = openParen
+            , right = closeParen
+            , elems = elems
+            , delims = delims
+            }
+        )
+      end
 
-  fun enumerationLabel toks i =
-    if check toks Token.isEnumerationLabel i then
-      (i + 1, List.nth (toks, i))
-    else
-      ParseUtils.tokError toks
-        {pos = i, what = "", explain = NONE}
-
-  fun selectLabel toks i =
-    if check toks Token.isSelectLabel i then
+  fun identifier toks i =
+    if check toks Token.isIdentifier i then
       (i + 1, List.nth (toks, i))
     else
       ParseUtils.tokError toks 

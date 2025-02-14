@@ -201,6 +201,7 @@ sig
   val isAggregateLabel: token -> bool
   val isEnumerationLabel: token -> bool
   val isSelectLabel: token -> bool
+  val isUnaryOp: token -> bool
   val endsCurrentExp: token -> bool
 
   structure Pretoken:
@@ -656,6 +657,12 @@ struct
     case getClass tok of 
       Keyword Select => true
     | _ => false
+
+  fun isUnaryOp tok =
+    case getClass tok of 
+      Keyword v =>
+        List.exists (fn v' => v' = v)
+          []
 
   fun makeGroup (s: pretoken list): token list =
     List.tabulate (List.length s, fn i => {idx = i, context = s})
