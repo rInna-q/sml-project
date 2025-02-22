@@ -72,13 +72,38 @@ struct
       fun parse_oneOrMoreDelimitedByKeyword x i = 
         PC.oneOrMoreDelimitedByKeyword toks x i 
       
+      fun consume_atExp infdict i =
+        if check Token.isConstant i then 
+          (i + 1, Ast.Exp.Const (tok i))
+        else if check Token.isUnaryOp i then
+          let 
+            val opp = tok i 
+            val (i, exp) = consume_atExp infdict (i + 1)
+          in 
+            (i + 1, Ast.Exp.Ident {opp = opp, exp = exp})
+          end 
+        else if isKeyword Token.OpenParen i then 
+          consume_expParens infdict (tok i) (i + 1)
+        else if isKeyword Token.OpenSquareBracket i then
+          consume_expList infdict (tok i) (i + 1)
+        else if isKeyword Token.OpenCurlyBracket i then
+          consume_expInt infdict (tok i) (i + 1)
+        else if isKeyword Token.Query i then 
+          consume_expQuery infdict (tok i) (i + 1)
+        else
+          ParseUtils.tokError toks 
+            { pos = i 
+            , what = ""
+            , explain = SOME ""
+            }
+
       fun consume_exp infdict i = 
         let 
           val (i, exp) =
             if check Token.isConstant i then
               (i + 1, Ast.Exp.Const (tok i))
             else if check Token.isUnaryOp i then 
-
+              consume_expIdent infdict (tok i) (i + 1) 
             else if isKeyword Token.OpenParen i then
               consume_expParens infdict (tok i) (i + 1)
             else if isKeyword Token.OpenSquareBracket i then
@@ -98,6 +123,13 @@ struct
         in 
           consume_afterExp infdict exp i 
         end
+
+      fun consume_expIdent infdict opp i =
+        let 
+          val (i, exp) = consume_exp infidict i 
+        in 
+          Ast.Exp.Ident {opp = opp, exp = exp}
+        end 
 
       fun consume_afterExp infdict exp i =
         let 
@@ -158,8 +190,6 @@ struct
           end 
         else
           Ast.Exp.
-
-        
     in 
       consume_exp infdict start
     end
